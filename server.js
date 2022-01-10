@@ -98,7 +98,7 @@ const server = http.createServer((req, res) => {
             {
                 statusCode = 200
 
-                fs.readFile("./content/categs.json", (error, datas) => {
+                fs.readFile("./content/datas.json", (error, datas) => {
                     console.log(error)
 
                     datas = JSON.parse(datas.toString())
@@ -106,8 +106,8 @@ const server = http.createServer((req, res) => {
                     contentRes = `<h1>Vous êtes sur les catégories principales</h1>
                     <ul>`
 
-                    datas.forEach(item => {
-                        contentRes += `<li><a href="/categs/subcategs?categID=${item.id}">${item.name}</a></li>`
+                    datas.categs.forEach(itemCateg => {
+                        contentRes += `<li><a href="/categs/subcategs?categID=${itemCateg.id}">${itemCateg.name}</a></li>`
                     })
 
                     contentRes += `</ul>`
