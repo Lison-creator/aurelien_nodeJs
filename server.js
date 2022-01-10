@@ -62,6 +62,7 @@ const server = http.createServer((req, res) => {
 
                 } else if (urlParse.pathname.includes("/categs")) {
 
+                    let error404 = false;
                     /* Categs : localhost:3000/categs */
 
                     /* Si on est sur la page d'accueil de "categs" */
@@ -69,11 +70,12 @@ const server = http.createServer((req, res) => {
 
                         statusCode = 200
 
+
                         contentRes = `<h1>Vous êtes sur les catégories principales</h1>
                     <ul>`
                         datas.categs.forEach(itemCateg => {
-                            contentRes += `<li><a href="/categs/subcategs?categID=${itemCateg.id}">${itemCateg.name}</a></li>`
-                        })
+                            contentRes += `<li><a href="/categs/${itemCateg.id}/subcategs">${itemCateg.name}</a></li>`
+                        });
                         contentRes += `</ul>`
 
                         res.writeHead(statusCode, head)
@@ -104,20 +106,68 @@ const server = http.createServer((req, res) => {
                         /* Prédicat: fonction callback exécutée par le find. Si le résultat est vrai, il arrête de travaailler, sinon il continu */
                         const categ = datas.categs.find(c => c.id === categId)
 
-                        /* Récupération de la subcateg (optionnelle !) avec une ternaire */
+                        if (categ !== undefined) {
+                            /* Récupération de la subcateg (optionnelle !) avec une ternaire */
 
-                        /* 1) on vérifie que la valeur existe */
-                        const subCategId = urlSplit[4] != undefined ? parseInt(urlSplit[4]) : null;
-                        /* Si urlSplit est différent de "undefined" on fait un parseInt(urlSplit[4]), sinon on renvoie "null" */
+                            /* 1) on vérifie que la valeur existe */
+                            const subCategId = urlSplit[4] != undefined ? parseInt(urlSplit[4]) : null;
 
-                        res.writeHead(statusCode, head)
-                        res.write("Url =>" + urlParse.pathname)
-                        res.write("CategId =>" + categId)
-                        res.end()
-                    } else {
-                        res.writeHead(404, head)
-                        res.write("Not found")
-                        res.end()
+
+                            /* Si urlSplit est différent de "undefined" on fait un parseInt(urlSplit[4]), sinon on renvoie "null" */
+                            if (subCategId === null) {
+
+                                contentRes = `<h1>Catégorie : ${categ.name}</h1><br>
+                                <h2>Veuillez selectionner une sous-catégorie</h2>
+                                <ul>`;
+                                categ.subcategs.forEach((subCateg) => {
+                                    console.log(subCateg);
+                                    contentRes += `<li>
+                                    <a href="categs/${categ.id}/subcategs/${subCateg.id}">
+                                    ${subCateg.name}
+                                    </a>
+                                    </li>`
+                                })
+                                contentRes += `</ul>`;
+
+                                res.writeHead(404, head)
+                                res.write("Catégorie" + contentRes)
+                                res.end()
+
+                            } else {
+                                error404 = true;
+
+                                res.writeHead(404, head)
+                                res.write("Categ ID" + urlParse.pathname)
+                                res.end()
+
+                            }
+
+                        }
+
+                    } /* En cas d'erreur */
+                    else {
+                        error404 = ":( Catégorie non disponible";
+                        const subCateg = categ.subcategs.find(sc => sc.id === subCategId);
+                        if (subCateg != undefined) {
+
+                            contentRes = `<h1>Catégorie principale : ${categ.name}</h1>
+                            <h2>Catégorie secondaire : ${subCateg.name}</h2>
+                            <br>
+                            <h3>Liste des produits</h3>
+                            <ul>`;
+                            subCateg.products.forEach(product => {
+                                contentRes += `<li>
+                                ${product.name} ${product.price} €;
+                                                </li>`
+                            })
+                            contentRes += `</ul>`;
+
+                            res.writeHead(statusCode, head)
+                            res.write(contentRes)
+                            res.end()
+                        } else {
+                            error404 = "Sous-catégorie inconnue";
+                        }
                     }
 
 
@@ -129,58 +179,58 @@ const server = http.createServer((req, res) => {
                 products : localhost:3000/categs/42/subcategs/2/products
 
                 product 13 : localhost:3000/categs/42/subcategs/2/products?prod=13 */
+                }
+
+            } else if (req.method == "POST") {
+                if (urlParse.pathname == "/contact") {
+                    let body = ""
+
+                    req.on('data', (form) => {
+                        body += form.toString()
+                    })
+
+                    req.on('end', () => {
+
+                        //ici je suis dans la possibilité de recevoir de mon body (formulaire)
+                        // "name=loic&lastname=baudoux"    ====> STRING que je peux parser avec le décodeur
+                        // "{ 'name' : 'loic', 'lastname' : 'baudoux'}"     =====> STRING que je peux parser avec JSON.parse()
+                        if (body.startsWith("{") && body.endsWith("}"))
+                            body = JSON.parse(body)
+                        else {
+
+                            /*
+                            Convertit "name=loic&lastname=baudoux" en JSON { 'name' : 'loic', 'lastname' : 'baudoux' } utilisable
+                            */
+                            body = JSON.parse('{"' + decodeURI(body).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
+                        }
+
+                        console.log(body)
+                    })
 
 
-                } else if (req.method == "POST") {
-                    if (urlParse.pathname == "/contact") {
-                        let body = ""
-
-                        req.on('data', (form) => {
-                            body += form.toString()
-                        })
-
-                        req.on('end', () => {
-
-                            //ici je suis dans la possibilité de recevoir de mon body (formulaire)
-                            // "name=loic&lastname=baudoux"    ====> STRING que je peux parser avec le décodeur
-                            // "{ 'name' : 'loic', 'lastname' : 'baudoux'}"     =====> STRING que je peux parser avec JSON.parse()
-                            if (body.startsWith("{") && body.endsWith("}"))
-                                body = JSON.parse(body)
-                            else {
-
-                                /*
-                                Convertit "name=loic&lastname=baudoux" en JSON { 'name' : 'loic', 'lastname' : 'baudoux' } utilisable
-                                */
-                                body = JSON.parse('{"' + decodeURI(body).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
-                            }
-
-                            console.log(body)
-                        })
-
-
-                        //je traite le formulaire ici
-                        //et puis je redirige mon client vers autre part.
-                        statusCode = 303
-                        head = { "Location": "/" }
-
-                        res.writeHead(statusCode, head)
-                        res.write(contentRes)
-                        res.end()
-
-
-                        // statusCode 302 -> redirection standard
-                        // 307 -> passer de get à post puis redirger vers le meme lien en post 
-                        // 303 -> passer de get à post puis redirger vers un autre lien en get 
-                    }
-                } else {
-                    statusCode = 404
-                    contentRes = `<h1>Je ne connais pas cette méthode HTTP : ${req.method}</h1>`
+                    //je traite le formulaire ici
+                    //et puis je redirige mon client vers autre part.
+                    statusCode = 303
+                    head = { "Location": "/" }
 
                     res.writeHead(statusCode, head)
                     res.write(contentRes)
                     res.end()
+
+
+                    // statusCode 302 -> redirection standard
+                    // 307 -> passer de get à post puis redirger vers le meme lien en post 
+                    // 303 -> passer de get à post puis redirger vers un autre lien en get 
                 }
+            } else {
+                statusCode = 404
+                contentRes = `<h1>Je ne connais pas cette méthode HTTP : ${req.method}</h1>`
+
+                res.writeHead(statusCode, head)
+                res.write(contentRes)
+                res.end()
             }
+
         }
     });
 
