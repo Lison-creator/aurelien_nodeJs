@@ -1,6 +1,7 @@
 const http = require("http")
 const url = require("url")
 const fs = require("fs")
+const querystring = require("query-string");
 
 
 const server = http.createServer((req, res) => {
@@ -43,18 +44,38 @@ const server = http.createServer((req, res) => {
             if (req.method == "GET") {
                 if (urlParse.pathname == "/" || urlParse.pathname == "/accueil") {
                     statusCode = 200
+
+                    /* Argument GET: arguments qui se situent après un "?" dans l'url sous forme de "clé=valeur" */
+
                     contentRes = `<h1>Page d'accueil</h1>
-            <a href='/categs'>Vers les catégories principales</a>`
+                    <a href='/categs'>Vers les catégories principales</a>
+                    <br>
+                    
+                    <a href="/demo?name=Lison&lastname=Ferné">
+                    Demo GET -> /demo?name=Lison&lastname=Ferné
+                    </a>`;
+
 
                     res.writeHead(statusCode, head)
                     res.write(contentRes)
                     res.end()
                 } else if (urlParse.pathname == "/contact") {
+
+                    /* Lecture des données POST de la requête */
+                    let body = "";
+                    req.on("data", (form) => {
+                        body += form.toString();
+                    });
+
                     statusCode = 200
                     contentRes = `<h1>Page de contact en mode GET</h1>
-                <input type="text" name="name"><br>
-                <input type="text" name="lastname">
-                <button type="submit">Envoyer</button>`
+                    <form method="POST" action="/contact">
+                        <label for="name">Prénom</label><br>
+                        <input type="text" name="name" id="name"><br>
+                        <label for="lastname">Nom</label><br>
+                        <input type="text" name="lastname" id="lastname"><br>
+                        <button type="submit">Envoyer</button>
+                    </form>`;
 
                     res.writeHead(statusCode, head)
                     res.write(contentRes)
@@ -179,44 +200,87 @@ const server = http.createServer((req, res) => {
                 products : localhost:3000/categs/42/subcategs/2/products
 
                 product 13 : localhost:3000/categs/42/subcategs/2/products?prod=13 */
+                } else if (urlParse.pathname == "/demo") {
+
+                    /* Les donnée envoyées en mode GET sont accessibles sur la propriété "search" mais en brut: /demo?name=Lison&lastname=Ferné */
+                    console.log(urlParse.search);
+
+                    /* Les données seront traitées en objet js et stockées dans la propriété "query" */
+                    const dataGet = urlParse.query;
+                    console.log(dataGet);
+                    contentRes = `
+                    <h1>Reception des données "GET"</h1>
+                    <h2>Les données reçues: </h2>
+                    <p>${dataGet.name} ${dataGet.lastname}</p>`;
+                    statusCode = 200;
+
+                    res.writeHead(statusCode, head);
+                    res.write(contentRes);
+                    res.end();
+
+                } else {
+                    res.writeHead(404, head);
+                    res.write("<h1>Vous êtes perdus ? :O</h1>")
                 }
 
             } else if (req.method == "POST") {
                 if (urlParse.pathname == "/contact") {
+
+                    /* Via l'event "data" on lit les données de la requête (c'est un evènement pré-enregistré dans js). L'event est présent uniquement si il y a des données à lire.  */
+                    /* Les données seront stockées dans la variable "body" */
                     let body = ""
 
                     req.on('data', (form) => {
+                        console.log(form);
                         body += form.toString()
-                    })
+                    });
+                    /* Fin de la lecture des données: ce qui suit se déclenche lorsque les données ont été totalement lues (différent de res.end() )*/
+
 
                     req.on('end', () => {
+                        let result;
+                        console.log(body);
 
-                        //ici je suis dans la possibilité de recevoir de mon body (formulaire)
-                        // "name=loic&lastname=baudoux"    ====> STRING que je peux parser avec le décodeur
-                        // "{ 'name' : 'loic', 'lastname' : 'baudoux'}"     =====> STRING que je peux parser avec JSON.parse()
-                        if (body.startsWith("{") && body.endsWith("}"))
-                            body = JSON.parse(body)
-                        else {
+                        /* Test pour savoir si les données sont de type :
+                        - JSON ou 
+                        - x-ww-form-urlencoded */
 
-                            /*
-                            Convertit "name=loic&lastname=baudoux" en JSON { 'name' : 'loic', 'lastname' : 'baudoux' } utilisable
-                            */
-                            body = JSON.parse('{"' + decodeURI(body).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
+                        /* Test sur le JSON (code de Loïc) */
+
+                        if (body.startsWith("{") && body.endsWith("}")) {
+                            result = JSON.parse(body);
+                        } else {
+                            /* La fonction "parse" est une des fonctions de "querystring" qui effectue une transformation en objet JS */
+                            result = querystring.parse(body);
+                            /* On va récupérer un objet js avec les champs du formulaire */
                         }
 
-                        console.log(body)
-                    })
+                        console.log(result);
 
+                        /* Utilisation des données dans une nouvelle page qui va être envoyée */
+                        statusCode = 200;
+                        contentRes = `
+                        <h1>Page de contact - Réponse</h1>
+                        <h2>Bienvenue ${result.name} ${result.lastname}</h2>
+                        <a href="/">Retourner à la page Home</a>
+                        `;
+
+                        res.writeHead(statusCode, head);
+                        res.write(contentRes);
+                        res.end();
+                    });
+
+                    /* Redirection de Loïc */
 
                     //je traite le formulaire ici
                     //et puis je redirige mon client vers autre part.
-                    statusCode = 303
+                    /* statusCode = 303
                     head = { "Location": "/" }
 
                     res.writeHead(statusCode, head)
                     res.write(contentRes)
                     res.end()
-
+ */
 
                     // statusCode 302 -> redirection standard
                     // 307 -> passer de get à post puis redirger vers le meme lien en post 

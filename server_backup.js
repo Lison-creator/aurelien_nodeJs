@@ -153,8 +153,9 @@ const server = http.createServer((req, res) => {
                         //ici je suis dans la possibilité de recevoir de mon body (formulaire)
                         // "name=loic&lastname=baudoux"    ====> STRING que je peux parser avec le décodeur
                         // "{ 'name' : 'loic', 'lastname' : 'baudoux'}"     =====> STRING que je peux parser avec JSON.parse()
+
                         if (body.startsWith("{") && body.endsWith("}"))
-                            body = JSON.parse(body)
+                            body = JSON.parse(body);
                         else {
 
                             /*
