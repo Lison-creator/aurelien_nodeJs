@@ -1,5 +1,5 @@
 Exos FilRouge Node JS vers Express JS :
-Prévoir un serveur Http pour un petit site de vente de produits chinois
+Prévoir un serveur Http pour un petit site de vente de produits 
 ce petit serveur devra prendre en compte une page d'acceuil, avec une gestion de l'url / et /acceuil
 il devra également donner la possibilité d'avoir une page de contact
 il devra aussi avoir une url prévue pour les grandes catégorie du site
